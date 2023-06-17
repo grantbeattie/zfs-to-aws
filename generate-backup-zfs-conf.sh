@@ -24,6 +24,7 @@ configBoilerplate='
 bucket=wandering-base
 aws_region=sthlm
 endpoint_url=
+#rate_limit=1024K
 '
 
 #Set zfs

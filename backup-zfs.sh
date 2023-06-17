@@ -24,6 +24,7 @@ BUCKET=
 AWS_REGION=
 ENDPOINT_URL=
 PREFIX_ENDPOINT=
+RATE_LIMIT=0
 BACKUP_PATH=$(hostname -f)
 
 DEFAULT_INCREMENTAL_FROM_INCREMENTAL=0
@@ -165,6 +166,9 @@ function load_config
         elif [[ $in_ds == 0 && $arg == 'backup_path' ]]
         then
             BACKUP_PATH=$val
+	elif [[ $in_ds == 0 && $arg == 'rate_limit' ]]
+	then
+	    RATE_LIMIT=${val:-$RATE_LIMIT}
         elif [[ $arg == '[dataset]' ]]
         then
         check_set_ENDPOINT_URL "$ENDPOINT_URL"
@@ -286,7 +290,7 @@ function incremental_backup
 
     print_log notice "Performing incremental backup of $snapshot from $increment_from ($snapshot_size_iec)"
 
-    ${ZFS} send --raw -cpi $increment_from $snapshot | pv -s $snapshot_size | $AWS $PREFIX_ENDPOINT $ENDPOINT_URL s3 cp - s3://$BUCKET/$backup_path/$filename\
+    ${ZFS} send --raw -cpi $increment_from $snapshot | pv -s $snapshot_size -L $RATE_LIMIT | $AWS $PREFIX_ENDPOINT $ENDPOINT_URL s3 cp - s3://$BUCKET/$backup_path/$filename\
         --expected-size $snapshot_size \
         --metadata=$META_FULL_SNAPSHOT=false,\
 $META_SNAPSHOT=$snapshot,\
@@ -328,7 +332,7 @@ function full_backup
 
     print_log notice "Performing full backup of $snapshot ($snapshot_size_iec)"
 
-    ${ZFS} send --raw -cp $snapshot | pv -s $snapshot_size | $AWS $PREFIX_ENDPOINT $ENDPOINT_URL s3 cp - s3://$BUCKET/$backup_path/$filename\
+    ${ZFS} send --raw -cp $snapshot | pv -s $snapshot_size -L $RATE_LIMIT | $AWS $PREFIX_ENDPOINT $ENDPOINT_URL s3 cp - s3://$BUCKET/$backup_path/$filename\
         --expected-size $snapshot_size \
         --metadata=$META_FULL_SNAPSHOT=true,\
 $META_SNAPSHOT=$snapshot,\
